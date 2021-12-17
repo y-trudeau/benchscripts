@@ -1,0 +1,32 @@
+---
+
+- name: Install debconf-utils
+  apt:
+    name: debconf-utils
+    state: latest
+    update_cache: yes
+
+- name: Install gnupg 
+  apt:
+    name: gnupg
+    state: latest
+
+- name: Install the percona repo package
+  apt:
+     deb: https://repo.percona.com/apt/percona-release_latest.generic_all.deb 
+     state: present
+
+- name: Enable the ps-80 repository
+  shell: percona-release enable ps-80
+
+- name: Enable the pt repository
+  shell: percona-release enable pt
+
+- name: set kernel vm swappiness
+  sysctl:
+    name: vm.swappiness
+    value: 0
+    state: present
+    reload: yes
+
+  
