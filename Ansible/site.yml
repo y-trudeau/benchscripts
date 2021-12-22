@@ -1,4 +1,7 @@
 ---
-- include: ubuntu1804.yml 
+
+- include: linux.yml 
+
+- include: pmm.yml
 
 - include: mysql.yml

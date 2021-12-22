@@ -1,0 +1,5 @@
+/usr/bin/mysql --defaults-file=/home/ubuntu/.my.cnf <<EOF
+create user if not exists {{ sysbench_user }}@'%' identified with mysql_native_password by '{{ sysbench_password }}';
+grant all privileges on *.* to {{ sysbench_user }}@'%';
+EOF
+

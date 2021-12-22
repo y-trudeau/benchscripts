@@ -1,8 +1,30 @@
 #Group replication config
 [mysqld]
 bind_address=0.0.0.0
+
+# Innodb
 innodb_flush_log_at_trx_commit = 1
 innodb_flush_method=O_DIRECT
+innodb_buffer_pool_size = {{ (ansible_memtotal_mb*0.8-800)|int|abs }}
+innodb_log_file_size = {{ (ansible_memtotal_mb/1024*32)|int|abs }}
 
-
+# source config
+log_bin
+binlog_expire_logs_seconds=86400
+binlog_group_commit_sync_delay = 0
+binlog_group_commit_sync_no_delay_count = 0
+binlog_row_image = full
+binlog_transaction_compression = on
+binlog_transaction_compression_level_zstd = 1
 sync_binlog = 1
+server_id = {{ ansible_default_ipv4.address | regex_replace('[0-9]{1,3}\\.([0-9]{1,3})\\.([0-9]{1,3})\\.([0-9]{1,3})$', '\\1\\2\\3') }}
+gtid_mode = on
+enforce_gtid_consistency = on
+
+# replica config
+replica_parallel_workers = 1
+replica_preserve_commit_order = on
+replica_parallel_type=LOGICAL_CLOCK
+
+
+

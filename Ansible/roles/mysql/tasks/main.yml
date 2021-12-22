@@ -1,25 +1,20 @@
 ---
 
-
-
 - name: Specify MySQL root password before installing
-  debconf: name='mysql-server' question='percona-server-server-5.7/root-pass' value='root' vtype='password'
+  debconf: name='mysql-server' question='percona-server-server/root-pass' value='root' vtype='password'
   become: true
 
 - name: Confirm MySQL root password before installing
-  debconf: name='mysql-server' question='percona-server-server-5.7/re-root-pass' value='root' vtype='password'
+  debconf: name='mysql-server' question='percona-server-server/re-root-pass' value='root' vtype='password'
   become: true
 
-- name: Install packages for PS 5.7
+- name: Install packages for PS 
   apt:
     state: latest
     name: "{{ item.value }}"
     update_cache: yes 
   with_items:
-          - value: percona-toolkit
-          - value: percona-server-server-5.7
-          - value: percona-server-client-5.7 
-          - value: sysbench
+          - value: percona-server-server
 
 - name: copy the configuration template
   template:
@@ -42,4 +37,29 @@
           dest: /home/ubuntu/.my.cnf
           owner: ubuntu
           group: ubuntu
+
+- name: copy the user creation script 
+  template:
+    src: templates/create_user.sh.j2
+    dest: /tmp/create_user.sh
+    owner: root
+    group: root
+    mode: 0700
+
+- name: Call the user creation script
+  shell: bash /tmp/create_user.sh 
+
+- name: install pmm2-client
+  apt:
+    state: present 
+    name: pmm2-client
+  register: aptpmmclientout
+
+- name: connect pmm2-client to server
+  shell: "pmm-admin config --server-insecure-tls --server-url=https://admin:admin@{{ groups['mysql'] | map('extract', hostvars, ['ansible_default_ipv4','address']) | first }}"
+  when: aptpmmclientout.changed
+
+- name: Add the MySQL metrics
+  shell: pmm-admin add mysql --username=root --password=root --query-source=perfschema
+  when: aptpmmclientout.changed
 

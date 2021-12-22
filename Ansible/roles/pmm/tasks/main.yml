@@ -1,0 +1,27 @@
+---
+
+- name: copy the installation script 
+  copy:
+    src: files/get_pmm.sh
+    dest: /tmp/get_pmm.sh
+    owner: root
+    group: root
+    mode: 0700
+
+- name: Call installation script
+  shell: bash /tmp/get_pmm.sh
+
+- name: Enable the pt repository
+  shell: percona-release enable sysbench
+
+- name: Install sysbench
+  apt:
+    name: sysbench 
+    state: latest
+    update_cache: yes
+
+- name: Install ps client 
+  apt:
+    name: percona-server-client
+    state: latest
+

@@ -1,11 +1,5 @@
 ---
 
-- name: Install debconf-utils
-  apt:
-    name: debconf-utils
-    state: latest
-    update_cache: yes
-
 - name: Install gnupg 
   apt:
     name: gnupg
@@ -21,6 +15,15 @@
 
 - name: Enable the pt repository
   shell: percona-release enable pt
+
+- name: Enable the pt repository
+  shell: percona-release enable pmm2-client 
+
+- name: Install debconf-utils
+  apt:
+    name: debconf-utils
+    state: latest
+    update_cache: yes
 
 - name: set kernel vm swappiness
   sysctl:

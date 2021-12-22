@@ -3,3 +3,6 @@ ansible_python_interpreter: /usr/bin/python3
 
 repl_user: repl
 repl_password: repl
+sysbench_user: sbtest
+sysbench_password: sbtest
+
