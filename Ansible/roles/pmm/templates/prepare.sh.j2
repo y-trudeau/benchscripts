@@ -1,0 +1,13 @@
+#!/bin/bash
+
+PRIMARY={{ groups['mysql'] | map('extract', hostvars, ['ansible_default_ipv4','address']) | first }}
+SBUSER={{ sysbench_user }}
+SBPASS={{ sysbench_password }}
+
+# Guidelines: about 300MB per million rows.
+NTABLES=12
+SIZE={{ ((( groups['mysql'] | map('extract', hostvars, ['ansible_memtotal_mb']) | first)*0.8-800)*2000)|int|abs }}
+
+mysql -h ${PRIMARY} -u ${SBUSER} -p${SBPASS} -e 'drop database if exists sysbench; create database sysbench;'
+
+/usr/share/sysbench/oltp_update_index.lua --mysql-host=${PRIMARY} --mysql-ssl=off --mysql-user=${SBUSER} --mysql-password=${SBPASS} --mysql-db=sysbench --threads=4 --table_size=$SIZE --tables=$NTABLES prepare

@@ -1,9 +1,14 @@
 
 [mysql]
-LabPS57_1 ansible_host=10.0.7.41
+source ansible_host=3.137.216.80
+replica ansible_host=18.116.19.58
+
+[repSource]
+source ansible_host=3.137.216.80
+
+[repReplica]
+replica ansible_host=18.116.19.58
 
 [pmm]
+bench ansible_host=3.145.106.30
 
-[primary]
-
-[replica]

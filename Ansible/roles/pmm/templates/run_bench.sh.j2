@@ -1,0 +1,74 @@
+#!/bin/bash
+
+if [ -z $1 ]; then
+  echo 'A benchmark title is needed, one word with no space'
+  exit
+fi
+
+TITLE=$1
+
+DURATION=1200
+
+FULLTITLE="Results/${TITLE}/$(date +%s)"
+
+mkdir -p $FULLTITLE
+
+PRIMARY={{ groups['ReplSource'] | map('extract', hostvars, ['ansible_default_ipv4','address']) | first }}
+REPLICA={{ groups['ReplReplica'] | map('extract', hostvars, ['ansible_default_ipv4','address']) | first }}
+SBUSER={{ sysbench_user }}
+SBPASS={{ sysbench_password }}
+
+# Guidelines: about 300MB per million rows.
+NTABLES=12
+
+# Size is adjusted to be 2x the buffer pool size
+SIZE={{ ((( groups['mysql'] | map('extract', hostvars, ['ansible_memtotal_mb']) | first)*0.8-800)*2000)|int|abs }}
+
+
+function wait_for_sync() {
+  while true; do
+    sbm = $(mysql -h $REPLICA -u $SBUSER -p$SBPASS -e 'show slave status\G' | grep Seconds_Behind_Master | cut -d':' -f2 | tr -d ' ')
+    if [ $sbm -eq 0 ]; then
+      return 0
+    fi
+    sleep 2
+  done 
+}
+
+function annotate() {
+  pmm-admin annotate $1
+}
+
+function kill_collection() {
+  for pid in "${bg_jobs[@]}"
+  do
+    echo "Killing pid $pid"
+    kill $pid >/dev/null 2>&1
+    ps -p $pid >/dev/null 2>&1
+    if [ "$?" == "0" ]; then
+      sleep 0.1
+      kill -9 $pid >/dev/null 2>&1
+      wait $pid
+    fi
+  done
+}
+
+trap kill_collection INT
+
+wait_for_sync
+
+mysqladmin -h ${PRIMARY} -u ${SBUSER} -p${SBPASS} variables > $FULLTITLE/primary_vars.out 
+mysqladmin -h ${REPLICA} -u ${SBUSER} -p${SBPASS} variables > $FULLTITLE/replica_vars.out 
+
+for th in 1 2 4 8 16; do
+
+  annotate "${th}_threads"
+
+  timeout $DURATION mysqladmin -h ${PRIMARY} -u ${SBUSER} -p${SBPASS}  ext -i1 | xz -1 > $FULLTITLE/${th}thread_primary_status.out.xz &
+  timeout $DURATION mysqladmin -h ${REPLICA} -u ${SBUSER} -p${SBPASS}  ext -i1 | xz -1 > $FULLTITLE/${th}thread_replica_status.out.xz &
+
+  /usr/share/sysbench/oltp_update_index.lua --mysql-host=${PRIMARY} --mysql-ssl=off --mysql-user=${SBUSER} --mysql-password=${SBPASS} --mysql-db=sysbench --threads=$th --report-interval=5 --time=$DURATION --table_size=$SIZE --tables=$NTABLES run > $FULLTITLE/${th}thread_bench.out
+
+  wait_for_sync
+
+done

@@ -1,0 +1,4 @@
+mysqldump -h {{ groups['mysql'] | map('extract', hostvars, ['ansible_default_ipv4','address']) | first }} \
+  --single-transaction --all-databases --triggers --routines --events -u {{ sysbench_user }}  -p{{ sysbench_password }} | \
+   gzip -1 > /tmp/dump.sql.gz
+(echo "reset master;"; zcat /tmp/dump.sql.gz )| mysql -uroot -proot

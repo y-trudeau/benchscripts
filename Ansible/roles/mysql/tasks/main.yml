@@ -49,6 +49,14 @@
 - name: Call the user creation script
   shell: bash /tmp/create_user.sh 
 
+- name: copy the replication script 
+  template:
+    src: templates/setup_replication.sh.j2
+    dest: /root/setup_replication.sh
+    owner: root
+    group: root
+    mode: 0700
+
 - name: install pmm2-client
   apt:
     state: present 
@@ -56,7 +64,7 @@
   register: aptpmmclientout
 
 - name: connect pmm2-client to server
-  shell: "pmm-admin config --server-insecure-tls --server-url=https://admin:admin@{{ groups['mysql'] | map('extract', hostvars, ['ansible_default_ipv4','address']) | first }}"
+  shell: "pmm-admin config --server-insecure-tls --server-url=https://admin:admin@{{ groups['pmm'] | map('extract', hostvars, ['ansible_default_ipv4','address']) }}"
   when: aptpmmclientout.changed
 
 - name: Add the MySQL metrics

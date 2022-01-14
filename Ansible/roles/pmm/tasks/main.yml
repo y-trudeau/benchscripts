@@ -2,14 +2,14 @@
 
 - name: copy the installation script 
   copy:
-    src: files/get_pmm.sh
-    dest: /tmp/get_pmm.sh
+    src: files/get-pmm.sh
+    dest: /tmp/get-pmm.sh
     owner: root
     group: root
     mode: 0700
 
 - name: Call installation script
-  shell: bash /tmp/get_pmm.sh
+  shell: bash /tmp/get-pmm.sh
 
 - name: Enable the pt repository
   shell: percona-release enable sysbench
@@ -25,3 +25,29 @@
     name: percona-server-client
     state: latest
 
+- name: install pmm2-client
+  apt:
+    state: present
+    name: pmm2-client
+  register: aptpmmclientout
+
+- name: connect pmm2-client to server
+  shell: "pmm-admin config --server-insecure-tls --server-url=https://admin:admin@{{ groups['mysql'] | map('extract', hostvars, ['ansible_default_ipv4','address']) | first }}"
+  ignore_errors: yes
+  when: aptpmmclientout.changed
+
+- name: copy the configuration template
+  template:
+    src: templates/prepare.sh.j2
+    dest: /home/ubuntu/prepare.sh
+    owner: ubuntu
+    group: ubuntu
+    mode: 0755
+
+- name: copy the configuration template
+  template:
+    src: templates/run_bench.sh.j2
+    dest: /home/ubuntu/run_bench.sh
+    owner: ubuntu
+    group: ubuntu
+    mode: 0755
